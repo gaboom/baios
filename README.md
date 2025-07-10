@@ -1,15 +1,22 @@
-# Baios
-Basic AI Operating System - Business Agent Integration Operating System
+<img alt="baiOS" src="logo.png" height="50" />
+<img alt="baiOS" src="logo2.png" height="50" />
+<hr/>
+
+# baiOS
+
+Basic Artificial Intelligence Operating System  
+Business Agent Integration on Steroids
 
 # Motivation
-Middleware to run context engineering agentic workflows.
-Most importantly it should manage and share the **context** across the agents.
+Extendible middleware platform to run agentic workflows.
+
+Supports context engineering: manages and shares the **context** across the workflow so agents can make us of the full context.
 
 # Requirements
 POC implemented using BPMN and Python:
 * https://bpmn.io/ (just to review bpmn xml visually)
 * https://pypi.org/project/SpiffWorkflow/ (current framework)
-* enterprise example: https://camunda.com/
+* See enterprise example: https://camunda.com/
 
 Workflow
 ---
@@ -34,7 +41,7 @@ The "user process" will be the agent(s) executing.
 use Mermaid here
 
 # Future plans
-1. Error handling, logging across agents
+1. Error handling, logging across agents, stdin workflow spec
 1. Implement pluggable, discoverable task toolsets (initialize model(s) connectio(s), tools, mcp servers etc.)
 1. Context partitioning, context security
 1. Tools filters, tool repositories 

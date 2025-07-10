@@ -1,6 +1,6 @@
 import os
 import logging
-from openai import OpenAI
+from openai import AsyncOpenAI
 
 class StorylineAgent:
     """
@@ -10,7 +10,7 @@ class StorylineAgent:
     def __init__(self):
         if not os.environ.get("OPENAI_API_KEY"):
             raise ValueError("The OPENAI_API_KEY environment variable is not set.")
-        self.client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+        self.client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
         self.prompt_text = """
 We need simple common well-played game ideas. Single player preferred, but surprise me sometimes with 2+ player ones.
 The game must be a known one so the rules should well understood, maybe clarify any variation of the game rules.
@@ -19,7 +19,7 @@ Generate a short one paragraph idea that outlines such a game! Include everythin
 (Each idea will be fed to ai code generators which produce poc mini games. Keep it simple. Because this is in an agentic workflow: use your powers to pass necessary specifications to image generating and source code generating agent.)
 """
 
-    def generate(self):
+    async def generate(self):
         """
         This is the core logic method. It is called by the workflow task.
         It interacts with the OpenAI API and prints the result.
@@ -27,7 +27,7 @@ Generate a short one paragraph idea that outlines such a game! Include everythin
         logging.info("StorylineAgent is generating a storyline.")
         try:
             logging.info("Sending prompt to OpenAI...")
-            response = self.client.chat.completions.create(
+            response = await self.client.chat.completions.create(
                 model="gpt-4o",
                 messages=[{"role": "user", "content": self.prompt_text}]
             )

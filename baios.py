@@ -1,42 +1,71 @@
-import os
 import logging
+import asyncio
 from SpiffWorkflow.bpmn.workflow import BpmnWorkflow
-from SpiffWorkflow.bpmn.parser import BpmnValidator
-from SpiffWorkflow.spiff.parser.process import SpiffBpmnParser
+from SpiffWorkflow.util.task import TaskState
+from agent_storyline import StorylineAgent
 
 # --- Basic Logging Setup ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# =================================================================
-# GENERIC BAIOS ORCHESTRATOR
-# =================================================================
-def main():
+class Baios:
     """
-    This is a generic orchestrator. It loads and runs a BPMN file,
-    assuming the file itself contains all necessary script logic.
+    An orchestrator that encapsulates a SpiffWorkflow BpmnWorkflow instance
+    and drives its execution by handling ready tasks.
     """
-    # 1. Create the BPMN parser and load the file.
-    parser = SpiffBpmnParser(validator=BpmnValidator())
-    parser.add_bpmn_file('POC-GAME_GENERATOR.bpmn')
-    spec = parser.get_spec('GamePocGenerator')
+    def __init__(self, process):
+        """
+        Initializes the orchestrator with a workflow specification.
 
-    # 2. Create and run the workflow.
-    #    No specific task logic is needed here.
-    workflow = BpmnWorkflow(spec)
-    logging.info("Starting baiOS workflow...")
-    workflow.run_all()
-    logging.info("Workflow finished.")
+        Args:
+            process: The parsed BPMN workflow specification.
+        """
+        self.workflow = BpmnWorkflow(process)
 
-    # 3. Print the final context from the workflow.
-    print("\n" + "="*20 + " FINAL CONTEXT " + "="*20)
-    if "storyline_result" in workflow.data:
-        print("Generated Storyline:")
-        print(workflow.data["storyline_result"])
-    if "storyline_error" in workflow.data:
-        print("Error:")
-        print(workflow.data["storyline_error"])
-    print("="*55)
+    async def _run_scheduler(self):
+        """
+        The private scheduler loop that polls for ready tasks and dispatches
+        them to the correct agent or logic.
+        """
+        ready_tasks = self.workflow.get_tasks(state=TaskState.READY)
+        while ready_tasks:
+            for task in ready_tasks:
+                if task.task_spec.name == 'TaskStoryLine':
+                    logging.info(f"Executing task: '{task.task_spec.name}'")
+                    
+                    # --- Agent Logic ---
+                    agent = StorylineAgent()
+                    try:
+                        result = await agent.generate()
+                        task.set_data(storyline_result=result)
+                    except Exception as e:
+                        logging.error(f"Agent execution failed: {e}", exc_info=True)
+                        task.set_data(storyline_error=str(e))
+                    # -------------------
 
+                    task.complete()
+                    logging.info(f"Task '{task.task_spec.name}' completed.")
+                    
+                    # Run the workflow again to process the completion
+                    self.workflow.run_all()
+            
+            ready_tasks = self.workflow.get_tasks(state=TaskState.READY)
 
-if __name__ == "__main__":
-    main()
+    def run_all(self):
+        """A synchronous wrapper that runs the entire async workflow."""
+        return asyncio.run(self.run())
+
+    async def run(self):
+        """
+        This is the main execution loop that prepares the workflow and
+        starts the scheduler.
+        """
+        logging.info("Starting baiOS workflow execution...")
+        
+        # First, run to the first ready task
+        self.workflow.run_all() 
+
+        # Await all task executions
+        await self._run_scheduler()
+
+        logging.info("Workflow finished.")
+        return self.workflow.data
